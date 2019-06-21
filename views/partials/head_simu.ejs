@@ -1,0 +1,62 @@
+<style>
+#noVNC-canvas {
+    height: 240px;
+    width: 320px;
+}
+
+.hidden, .hidden div {
+    display: none;
+}
+
+#connected-view.hidden, #connected-view.hidden div {
+    display: block;
+    visibility: hidden;
+}
+
+#terminal_output {
+    background-color: #1e1e1e;
+    color: lightgray;
+    font-family: Consolas;
+    font-size: small;
+}
+</style>
+
+<script src="js/bundle.js"></script>
+<script>
+    const socket = io.connect('http://localhost:3000')
+
+    function add_output(data) {
+        //document.getElementById('serial_output').value.append(data)
+        const term_output = $('textarea#terminal_output')
+        term_output.append(data)
+        term_output.scrollTop(term_output[0].scrollHeight)
+    }
+
+    socket.on('connect', (data) => {
+        console.log('Client connected...' + data)
+    })
+
+    socket.on('exit', (data) => {
+        add_output(data)
+    })
+
+    socket.on('stdout', (data) => {
+        const buf = String.fromCharCode.apply(null, new Uint8Array(data))
+        add_output(buf)
+    })
+
+    socket.on('stderr', (data) => {
+        const buf = String.fromCharCode.apply(null, new Uint8Array(data))
+        add_output(buf)
+    })
+
+    $(document).ready(() => {
+        $('#command_form').submit((event) => {
+            var input = $('#terminal_input')
+            socket.emit('stdin', input.val())
+            input.val('')
+            return false
+        })
+        $('#terminal_input').focus()
+    })
+</script>
