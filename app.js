@@ -2,7 +2,7 @@ const express = require('express')
 const app = express()
 const server = require('http').Server(app)
 const io = require('socket.io')(server)
-const Websocket = require('ws')
+const { Socket } = require('net')
 const VirtualMachine = require('./models/virtual_machine')
 
 app.use(express.static('public'))
@@ -57,34 +57,22 @@ vm.executeCommand('query-status', (error, status) => {
   }
 })
 
-let ioWs = null
+let ioSock = null
 setTimeout(() => {
-  console.log('creating io socket...')
-  ioWs = new Websocket('ws://localhost:8000', 'binary')
+  console.log('creating socket...')
+  ioSock = new Socket()
 
-  ioWs.addEventListener('open', () => {
-    console.log('*****************************************')
-    console.log('Connected to serial port of simulation...')
-    console.log('*****************************************')
-  })
-
-  ioWs.addEventListener('close', (code, reason) => {
-    console.log('*****************************************')
-    console.log('Connection to simulation closed')
-    console.log('Code:   ' + code)
-    console.log('Reason: ' + reason)
-    console.log('*****************************************')
-  })
-
-  ioWs.addEventListener('error', (error) => {
+  ioSock.addListener('error', (error) => {
     console.log('#########################################')
     console.log('ConnectError : ' + error)
     console.log('#########################################')
   })
 
-  ioWs.addEventListener('message', (data) => {
-    console.log('m: ' + String.fromCharCode(data.data[0]) + ', Raw: ' + data.data[0])
+  ioSock.addListener('data', (data) => {
+    console.log('data rcv : ' + data)
   })
+
+  ioSock.connect(8000, '127.0.0.1')
 }, 15000)
 
 io.on('connection', (client) => {
@@ -96,12 +84,12 @@ io.on('connection', (client) => {
   })
   client.on('input', (data) => {
     console.log('input data' + data)
-    if (ioWs && ioWs.readyState === ioWs.OPEN) {
-      ioWs.send(data, { binary: true }, () => {
+    if (ioSock && !ioSock.pending) {
+      ioSock.write(data, () => {
         console.log('Value ' + data + ' written to vm')
       })
     } else {
-      console.log('websocket not ready yet')
+      console.log('socket not ready yet')
     }
   })
 })

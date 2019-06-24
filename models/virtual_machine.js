@@ -27,7 +27,7 @@ class VirtualMachine extends EventEmitter {
         '-device', 'qemu-xhci',
         '-device', 'usb-tablet',
         '-qmp', 'tcp::45454,server,nowait',
-        '-serial', 'websocket:127.0.0.1:8000,server,nowait'
+        '-serial', 'tcp:127.0.0.1:8000,server,nowait'
       ]
     } else {
       this.config = config
