@@ -4,7 +4,6 @@ const server = require('http').Server(app)
 const io = require('socket.io')(server)
 const Websocket = require('ws')
 const VirtualMachine = require('./models/virtual_machine')
-const QMP = require('./models/qmp')
 
 app.use(express.static('public'))
 app.set('view engine', 'ejs')
