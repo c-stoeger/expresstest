@@ -43,18 +43,6 @@ vm.on('error', (code, signal) => {
   io.emit('stderr', { code: code, signal: signal })
 })
 
-io.on('connection', (client) => {
-  console.log('on(connection) called...')
-  client.on('stdin', (data) => {
-    if (vm.stdin) {
-      vm.stdin.write(data + '\n')
-    }
-  })
-  client.on('input', (data) => {
-    console.log('input data' + data)
-  })
-})
-
 vm.on('status', (state) => {
   console.log('Virtual machine state: ' + state)
   io.emit('vm_state', state)
@@ -90,10 +78,18 @@ vm.executeCommand('query-status', (error, status) => {
     console.info('Current VM Status : %s', status.status)
   }
 })
+vm.executeCommand('guest-info', (error, status) => {
+  if (error) {
+    console.log('QMP ERROR : ' + error)
+  } else {
+    console.info('Current VM Status : %s', status.status)
+  }
+})
 
+let ioWs = null
 setTimeout(() => {
   console.log('creating io socket...')
-  const ioWs = new Websocket('ws://localhost:8000', 'binary')
+  ioWs = new Websocket('ws://localhost:8000', 'binary')
 
   ioWs.addEventListener('open', () => {
     console.log('*****************************************')
@@ -118,21 +114,23 @@ setTimeout(() => {
   ioWs.addEventListener('message', (data) => {
     console.log('m: ' + String.fromCharCode(data.data[0]) + ', Raw: ' + data.data[0])
   })
-
-  let data = {
-    channel: 1,
-    value: 42.0
-  }
-
-  setInterval(() => {
-    if (ioWs.readyState === ioWs.OPEN) {
-      const jData = JSON.stringify(data)
-      ioWs.send(jData, { binary: true }, () => {
-        console.log('Value ' + jData + ' written')
-      })
-      data.value += 1.234
-    } else {
-      console.log('websocket not ready yet...')
-    }
-  }, 2000)
 }, 15000)
+
+io.on('connection', (client) => {
+  console.log('on(connection) called...')
+  client.on('stdin', (data) => {
+    if (vm.stdin) {
+      vm.stdin.write(data + '\n')
+    }
+  })
+  client.on('input', (data) => {
+    console.log('input data' + data)
+    if (ioWs && ioWs.readyState === ioWs.OPEN) {
+      ioWs.send(data, { binary: true }, () => {
+        console.log('Value ' + data + ' written to vm')
+      })
+    } else {
+      console.log('websocket not ready yet')
+    }
+  })
+})

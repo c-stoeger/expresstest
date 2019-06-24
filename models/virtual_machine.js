@@ -37,6 +37,7 @@ class VirtualMachine extends EventEmitter {
     this.subProc = null
     this.machine_state = VM_STATE.STOP
     this.qmp = new QMP()
+    this.qmpConnectionPromise = null
   }
 
   start () {
@@ -64,12 +65,14 @@ class VirtualMachine extends EventEmitter {
     })
     this.machine_state = VM_STATE.RUN
     this.emit('status', this.machine_state)
-    this.qmp.connect(45454, 'localhost', (error) => {
-      if (error) {
-        console.log('QMP connect error : ' + error)
-      } else {
-        console.log('QMP connected...')
-      }
+    this.qmpConnectionPromise = new Promise((resolve, reject) => {
+      this.qmp.connect(45454, 'localhost', (error) => {
+        if (error) {
+          reject(new Error('QMP connect error : ' + error))
+        } else {
+          resolve()
+        }
+      })
     })
   }
 
@@ -91,7 +94,11 @@ class VirtualMachine extends EventEmitter {
   }
 
   executeCommand (command, callback) {
-    this.qmp.execute(command, callback)
+    if (this.qmpConnectionPromise) {
+      this.qmpConnectionPromise.then(() => {
+        this.qmp.execute(command, callback)
+      })
+    }
   }
 }
 

@@ -6,6 +6,7 @@ const split = require('split2')
 class QMP extends Socket {
   constructor () {
     super()
+    this.callbacks = []
     this.commands = []
   }
 
@@ -15,7 +16,7 @@ class QMP extends Socket {
       args = null
     }
 
-    this.commands.push(callback)
+    this.callbacks.push(callback)
 
     if (args) {
       this.write(JSON.stringify({ execute: command, arguments: args }))
@@ -56,7 +57,7 @@ class QMP extends Socket {
         }
         const json = JSON.parse(line)
         if (json.return || json.error) {
-          const callback = this.commands.shift()
+          const callback = this.callbacks.shift()
           const error = json.error ? new Error(json.error.desc) : null
 
           if (callback) {
@@ -68,6 +69,7 @@ class QMP extends Socket {
           }
         } else if (json.event) {
           this.emit(json.event.toLowerCase(), json.event)
+          console.log(json.event)
         }
       })
 
