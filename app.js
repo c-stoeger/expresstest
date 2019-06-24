@@ -49,35 +49,7 @@ vm.on('status', (state) => {
 
 // fire up the machine...
 vm.start()
-
-// // setting up qemu monitor
-// const qmp = new QMP()
-// qmp.connect(45454, 'localhost', function (error) {
-//   if (error) {
-//     console.log('QMP Error : ' + error)
-//   } else {
-//     console.info('QEMU version %d.%d.%d',
-//       qmp.version.qemu.major, qmp.version.qemu.minor, qmp.version.qemu.micro)
-
-//     qmp.execute('query-status', (error, status) => {
-//       if (error) {
-//         console.log('QMP ERROR : ' + error)
-//       } else {
-//         console.info('Current VM Status : %s', status.status)
-//       }
-//       this.end()
-//     })
-//   }
-// })
-
 vm.executeCommand('query-status', (error, status) => {
-  if (error) {
-    console.log('QMP ERROR : ' + error)
-  } else {
-    console.info('Current VM Status : %s', status.status)
-  }
-})
-vm.executeCommand('guest-info', (error, status) => {
   if (error) {
     console.log('QMP ERROR : ' + error)
   } else {
