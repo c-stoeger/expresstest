@@ -2,7 +2,54 @@
     <h3 class="card-header">VM Control</h3>
     <div class="card-body">
         <div class="alert alert-secondary" id="vm-state-view">
-            The virtual machine is powered off.
+            <p>The virtual machine is <b><span id="status_text">powereasdad off</span></b>.</p>
+            <button class="btn btn-success" id="vm-start-btn">Start Simulation</button>
+            <button class="btn btn-danger" id="vm-stop-btn">Stop Simulation</button>
+            <a href="ssh://root@192.168.42.101" class="btn btn-primary" id="ssh-start-btn">SSH Session</a>
         </div>
     </div>
 </div>
+<script>
+    $('#vm-stop-btn').on('click', () => {
+        socket.emit('vmcontrol', JSON.stringify({ command: 'stop' }))
+    })
+    $('#vm-start-btn').on('click', () => {
+        socket.emit('vmcontrol', JSON.stringify({ command: 'start' }))
+    })
+    socket.on('vmc-status', (data) => {
+        obj = JSON.parse(data)
+        if (obj.return === 'ok') {
+            if (obj.status === 'running') {
+                $('#status_text').text('running')
+                $('#vm-state-view').removeClass()
+                $('#vm-state-view').addClass('alert alert-success')
+                // $('#vm-startstop-btn').removeClass()
+                // $('#vm-startstop-btn').addClass('btn btn-danger')
+                // $('#vm-startstop-btn').text('Stop Simulation')
+                // $('#vm-startstop-btn').on('click', () => {
+                //     socket.emit('vmcontrol', JSON.stringify({ command: 'stop' }))
+                // })
+            } else if (obj.status === 'stopped') {
+                $('#status_text').text('powered off')
+                $('#vm-state-view').removeClass()
+                $('#vm-state-view').addClass('alert alert-secondary')
+                // $('#vm-startstop-btn').removeClass()
+                // $('#vm-startstop-btn').addClass('btn btn-success')
+                // $('#vm-startstop-btn').text('Start Simulation')
+                // $('#vm-startstop-btn').on('click', () => {
+                //     socket.emit('vmcontrol', JSON.stringify({ command: 'start' }))
+                // })
+            } else {
+                $('#status_text').text('in UNDEFINED STATE!')
+                $('#vm-state-view').removeClass()
+                $('#vm-state-view').addClass('alert alert-danger')
+                // $('#vm-startstop-btn').removeClass()
+                // $('#vm-startstop-btn').addClass('btn btn-secondary')
+                // $('#vm-startstop-btn').text('Undefined')
+                // $('#vm-startstop-btn').on('click', () => {
+                //     console.error('No action because of undefined event state of virtual machine')
+                // })
+            }
+        }
+    })
+</script>

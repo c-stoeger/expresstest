@@ -59,8 +59,10 @@
         })
         $('#terminal_input').focus()
         $('#range_channel1').on('input change', (event) => {
-            socket.emit('input', JSON.stringify({ channel: 1, value: event.target.value }))
-            $('#range_channel1_value').text(event.target.value)
+            socket.emit('input', JSON.stringify({ channel: 1, value: parseFloat(event.target.value) }))
+            $('#range_channel1_value').text(parseFloat(event.target.value))
         })
+        // query status of vm
+        socket.emit('vmcontrol', JSON.stringify({ command: 'get-status' }))
     })
 </script>

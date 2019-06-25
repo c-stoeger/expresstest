@@ -34,8 +34,8 @@ vm.on('stderr_data', (data) => {
   io.emit('stderr', data)
 })
 
-vm.on('exit', (code) => {
-  io.emit('exit', '*** VM exited (Code ' + code + ')')
+vm.on('exit', (code, signal) => {
+  io.emit('exit', '*** VM exited (Code ' + code + ', Signal ' + signal + ')')
 })
 
 vm.on('error', (code, signal) => {
@@ -44,42 +44,59 @@ vm.on('error', (code, signal) => {
 
 vm.on('status', (state) => {
   console.log('Virtual machine state: ' + state)
-  io.emit('vm_state', state)
+  // dirty here, because this is not an answer to a query,
+  // but we only have a concept here... ;)
+  io.emit('vmc-status', JSON.stringify({ return: 'ok', status: state }))
 })
 
 // fire up the machine...
-vm.start()
-vm.executeCommand('query-status', (error, status) => {
-  if (error) {
-    console.log('QMP ERROR : ' + error)
-  } else {
-    console.info('Current VM Status : %s', status.status)
-  }
-})
+// vm.start()
+// vm.executeCommand('query-status', (error, status) => {
+//   if (error) {
+//     console.log('QMP ERROR : ' + error)
+//   } else {
+//     console.info('Current VM Status : %s', status.status)
+//   }
+// })
 
 let ioSock = null
-setTimeout(() => {
-  console.log('creating socket...')
-  ioSock = new Socket()
-
-  ioSock.addListener('error', (error) => {
-    console.log('#########################################')
-    console.log('ConnectError : ' + error)
-    console.log('#########################################')
-  })
-
-  ioSock.addListener('data', (data) => {
-    console.log('data rcv : ' + data)
-  })
-
-  ioSock.connect(8000, '127.0.0.1')
-}, 15000)
 
 io.on('connection', (client) => {
   console.log('on(connection) called...')
   client.on('stdin', (data) => {
     if (vm.stdin) {
       vm.stdin.write(data + '\n')
+    }
+  })
+  client.on('vmcontrol', (data) => {
+    if (data) {
+      const obj = JSON.parse(data)
+      console.log(obj)
+      if (obj.command === 'stop') {
+        ioSock.end()
+        vm.stop()
+      } else if (obj.command === 'start') {
+        vm.start()
+        setTimeout(() => {
+          console.log('creating socket...')
+          ioSock = new Socket()
+
+          ioSock.addListener('error', (error) => {
+            console.log('#########################################')
+            console.log('ConnectError : ' + error)
+            console.log('#########################################')
+          })
+
+          ioSock.addListener('data', (data) => {
+            console.log('data rcv : ' + data)
+          })
+
+          ioSock.connect(8000, '127.0.0.1')
+        }, 3000)
+      } else if (obj.command === 'get-status') {
+        console.log('returning status: ' + vm.status)
+        io.emit('vmc-status', JSON.stringify({ return: 'ok', status: vm.status }))
+      }
     }
   })
   client.on('input', (data) => {

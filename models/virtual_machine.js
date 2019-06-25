@@ -3,10 +3,11 @@
 const { spawn } = require('child_process')
 const EventEmitter = require('events')
 const QMP = require('./qmp')
+const kill = require('tree-kill')
 
 const VM_STATE = {
-  RUN: 0,
-  STOP: 1
+  RUN: 'running',
+  STOP: 'stopped'
 }
 
 class VirtualMachine extends EventEmitter {
@@ -33,7 +34,7 @@ class VirtualMachine extends EventEmitter {
       this.config = config
     }
 
-    this.qemuExecName = '"c:\\Program Files\\qemu\\qemu-system-arm.exe"'
+    this.qemuExecName = '"C:\\Program Files\\qemu\\qemu-system-arm.exe"'
     this.subProc = null
     this.machine_state = VM_STATE.STOP
     this.qmp = new QMP()
@@ -41,47 +42,57 @@ class VirtualMachine extends EventEmitter {
   }
 
   start () {
-    console.log('Starting the virtual machine')
-    this.subProc = spawn(this.qemuExecName, this.config, { shell: true })
-    // install exit handler
-    this.subProc.on('exit', (code) => {
-      console.log('VM : ' + this.qemuExecName + ' exited (Code ' + code + ')')
-      this.emit('exit', code)
-      this.subProc = null
-    })
-    // install error handler
-    this.subProc.on('error', (code, signal) => {
-      console.log('code   : ' + code)
-      console.log('signal : ' + signal)
-      this.emit('error', code, signal)
-    })
-    // install handlers for the std streams
-    // these are the streams of qemu, NOT linux and its programs!
-    this.subProc.stderr.on('data', (data) => {
-      this.emit('stderr_data', data)
-    })
-    this.subProc.stdout.on('data', (data) => {
-      this.emit('stdout_data', data)
-    })
-    this.machine_state = VM_STATE.RUN
-    this.emit('status', this.machine_state)
-    this.qmpConnectionPromise = new Promise((resolve, reject) => {
-      this.qmp.connect(45454, 'localhost', (error) => {
-        if (error) {
-          reject(new Error('QMP connect error : ' + error))
-        } else {
-          resolve()
-        }
+    if (!this.subProc) {
+      console.log('Starting the virtual machine')
+      this.subProc = spawn(this.qemuExecName, this.config, { shell: true })
+      // install exit handler
+      this.subProc.on('exit', (code, signal) => {
+        console.log('Event exit : ' + this.qemuExecName + ' (Code ' + code + ', Signal ' + signal + ')')
+        this.emit('exit', code, signal)
+        this.subProc = null
       })
-    })
+      // install error handler
+      this.subProc.on('error', (code) => {
+        console.log('Event error: code   : ' + code)
+        this.emit('error', code)
+      })
+      // install handlers for the std streams
+      // these are the streams of qemu, NOT linux and its programs!
+      this.subProc.stderr.on('data', (data) => {
+        this.emit('stderr_data', data)
+      })
+      this.subProc.stdout.on('data', (data) => {
+        this.emit('stdout_data', data)
+      })
+      console.info('Process started: PID ' + this.subProc.pid)
+      if (this.subProc.pid) {
+        this.machine_state = VM_STATE.RUN
+        this.emit('status', this.machine_state)
+        this.qmpConnectionPromise = new Promise((resolve, reject) => {
+          this.qmp.connect(45454, 'localhost', (error) => {
+            if (error) {
+              reject(new Error('QMP connect error : ' + error))
+            } else {
+              resolve()
+            }
+          })
+        }).catch((error) => {
+          console.error(error.message)
+        })
+      }
+    } else {
+      console.log('VirtualMachine already running...')
+    }
   }
 
   stop () {
     if (this.subProc) {
       console.log('Stopping the virtual machine')
+      // at the moment the machine is simply killed. No shutdown.
       this.qmp.end()
+      kill(this.subProc.pid)
+      this.machine_state = VM_STATE.STOP
     }
-    this.machine_state = VM_STATE.STOP
     this.emit('status', this.machine_state)
   }
 
