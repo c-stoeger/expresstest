@@ -9,6 +9,7 @@
   "author": "Christian",
   "license": "ISC",
   "dependencies": {
+    "JSONStream": "^1.3.5",
     "ejs": "^2.6.1",
     "express": "^4.17.1",
     "novnc-core": "^0.2.1",

@@ -1,8 +1,9 @@
 const express = require('express')
 const app = express()
 const server = require('http').Server(app)
-const io = require('socket.io')(server)
+const vmCtrlComm = require('socket.io')(server)
 const { Socket } = require('net')
+const JSONStream = require('JSONStream')
 const VirtualMachine = require('./models/virtual_machine')
 
 app.use(express.static('public'))
@@ -27,42 +28,32 @@ server.listen(3000, () => {
 // setting up the virtual machine
 const vm = new VirtualMachine()
 vm.on('stdout_data', (data) => {
-  io.emit('stdout', data)
+  vmCtrlComm.emit('stdout', data)
 })
 
 vm.on('stderr_data', (data) => {
-  io.emit('stderr', data)
+  vmCtrlComm.emit('stderr', data)
 })
 
 vm.on('exit', (code, signal) => {
-  io.emit('exit', '*** VM exited (Code ' + code + ', Signal ' + signal + ')')
+  vmCtrlComm.emit('exit', '*** VM exited (Code ' + code + ', Signal ' + signal + ')')
 })
 
 vm.on('error', (code, signal) => {
-  io.emit('stderr', { code: code, signal: signal })
+  vmCtrlComm.emit('stderr', { code: code, signal: signal })
 })
 
 vm.on('status', (state) => {
   console.log('Virtual machine state: ' + state)
   // dirty here, because this is not an answer to a query,
   // but we only have a concept here... ;)
-  io.emit('vmc-status', JSON.stringify({ return: 'ok', status: state }))
+  vmCtrlComm.emit('vmc-status', JSON.stringify({ return: 'ok', status: state }))
 })
 
-// fire up the machine...
-// vm.start()
-// vm.executeCommand('query-status', (error, status) => {
-//   if (error) {
-//     console.log('QMP ERROR : ' + error)
-//   } else {
-//     console.info('Current VM Status : %s', status.status)
-//   }
-// })
+let vmIOBus = null
 
-let ioSock = null
-
-io.on('connection', (client) => {
-  console.log('on(connection) called...')
+vmCtrlComm.on('connection', (client) => {
+  console.log('Control connection with Browser established')
   client.on('stdin', (data) => {
     if (vm.stdin) {
       vm.stdin.write(data + '\n')
@@ -73,40 +64,47 @@ io.on('connection', (client) => {
       const obj = JSON.parse(data)
       console.log(obj)
       if (obj.command === 'stop') {
-        ioSock.end()
+        vmIOBus.end()
         vm.stop()
       } else if (obj.command === 'start') {
         vm.start()
         setTimeout(() => {
-          console.log('creating socket...')
-          ioSock = new Socket()
+          console.log('connecting to IO-Bus of the virtual machine')
+          vmIOBus = new Socket()
+          vmIOBus.pipe(JSONStream.parse()).on('data', (data) => {
+            console.log('piped data : ')
+            console.log('type : ' + data.type)
+            console.log('channel : ' + data.channel)
+            console.log('value : ' + data.value)
+            vmCtrlComm.emit('output', JSON.stringify(data))
+          })
 
-          ioSock.addListener('error', (error) => {
+          vmIOBus.addListener('error', (error) => {
             console.log('#########################################')
-            console.log('ConnectError : ' + error)
+            console.log('IO-Bus connection error : ' + error)
             console.log('#########################################')
           })
 
-          ioSock.addListener('data', (data) => {
-            console.log('data rcv : ' + data)
+          vmIOBus.addListener('connect', (client) => {
+            console.log('IO-Bus connection to virtual machine established')
           })
 
-          ioSock.connect(8000, '127.0.0.1')
+          vmIOBus.connect(8000, '127.0.0.1')
         }, 3000)
       } else if (obj.command === 'get-status') {
         console.log('returning status: ' + vm.status)
-        io.emit('vmc-status', JSON.stringify({ return: 'ok', status: vm.status }))
+        vmCtrlComm.emit('vmc-status', JSON.stringify({ return: 'ok', status: vm.status }))
       }
     }
   })
   client.on('input', (data) => {
-    console.log('input data' + data)
-    if (ioSock && !ioSock.pending) {
-      ioSock.write(data, () => {
-        console.log('Value ' + data + ' written to vm')
+    //console.log('input data' + data)
+    if (vmIOBus && !vmIOBus.pending) {
+      vmIOBus.write(data, () => {
+        //console.log('Value ' + data + ' written to vm')
       })
     } else {
-      console.log('socket not ready yet')
+      console.log('IO-Bus to virtual machine not ready yet')
     }
   })
 })

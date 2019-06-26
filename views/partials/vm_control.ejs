@@ -23,33 +23,16 @@
                 $('#status_text').text('running')
                 $('#vm-state-view').removeClass()
                 $('#vm-state-view').addClass('alert alert-success')
-                // $('#vm-startstop-btn').removeClass()
-                // $('#vm-startstop-btn').addClass('btn btn-danger')
-                // $('#vm-startstop-btn').text('Stop Simulation')
-                // $('#vm-startstop-btn').on('click', () => {
-                //     socket.emit('vmcontrol', JSON.stringify({ command: 'stop' }))
-                // })
             } else if (obj.status === 'stopped') {
                 $('#status_text').text('powered off')
                 $('#vm-state-view').removeClass()
                 $('#vm-state-view').addClass('alert alert-secondary')
-                // $('#vm-startstop-btn').removeClass()
-                // $('#vm-startstop-btn').addClass('btn btn-success')
-                // $('#vm-startstop-btn').text('Start Simulation')
-                // $('#vm-startstop-btn').on('click', () => {
-                //     socket.emit('vmcontrol', JSON.stringify({ command: 'start' }))
-                // })
             } else {
                 $('#status_text').text('in UNDEFINED STATE!')
                 $('#vm-state-view').removeClass()
                 $('#vm-state-view').addClass('alert alert-danger')
-                // $('#vm-startstop-btn').removeClass()
-                // $('#vm-startstop-btn').addClass('btn btn-secondary')
-                // $('#vm-startstop-btn').text('Undefined')
-                // $('#vm-startstop-btn').on('click', () => {
-                //     console.error('No action because of undefined event state of virtual machine')
-                // })
             }
         }
     })
+    socket.emit('vmcontrol', JSON.stringify({ command: 'get-status' }))
 </script>

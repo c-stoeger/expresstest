@@ -1,0 +1,23 @@
+<!-- Contains several input elements for generating values for the simulation -->
+<div class="card">
+    <h3 class="card-header">Output</h3>
+    <div class="card-body">
+        <label class="btn btn-outline-success" id="digout-ch1">OFF</label>
+    </div>
+</div>
+<script>
+    socket.on('output', (data) => {
+        obj = JSON.parse(data)
+        if (obj.type === 'digout' && obj.channel === 1) {
+            if (obj.value === true) {
+                $('#digout-ch1').text('ON')
+                $('#digout-ch1').removeClass()
+                $('#digout-ch1').addClass('btn btn-success')
+            } else if (obj.value === false) {
+                $('#digout-ch1').text('OFF')
+                $('#digout-ch1').removeClass()
+                $('#digout-ch1').addClass('btn btn-outline-success')
+            }
+        }
+    })
+</script>
