@@ -2,35 +2,32 @@ const RFB = require('novnc-core').default
 
 let rfb = null
 
-const disconnect = (e) => {
+const disconnect = (reconnect) => {
   if (!rfb) return
 
-  if (e.type === 'click' || !e.detail || e.detail.clean) {
-    console.debug(`Disconnecting from ${rfb._url}`)
-    rfb.disconnect()
-  }
-
-  document.getElementById('connect-setup').classList.remove('hidden')
-  document.getElementById('connect-form').classList.remove('hidden')
-  document.getElementById('connect-password').classList.add('hidden')
-  document.getElementById('connected-view').classList.add('hidden')
+  console.debug(`Disconnecting from ${rfb._url}`)
+  rfb.disconnect()
 
   rfb = null
+  if (reconnect === true) {
+    setTimeout(() => {
+      connect('127.0.0.1:5700')
+    }, 1000)
+  }
 }
 
 const onConnected = () => {
   console.debug(`Connected to ${rfb._url}`)
-  document.getElementById('connect-setup').classList.add('hidden')
-  document.getElementById('connect-password').classList.remove('hidden')
-  document.getElementById('connected-view').classList.remove('hidden')
 }
 
 const onPasswordPrompt = () => {
-  document.getElementById('connect-form').classList.add('hidden')
-  document.getElementById('connect-password').classList.remove('hidden')
+  console.log('Password is needed ;)')
 }
 
 const connect = (address, password) => {
+  if (rfb) {
+    return
+  }
   try {
     rfb = new RFB(document.getElementById('noVNC-canvas'), `ws://${address}`)
     rfb.addEventListener('connect', onConnected)
@@ -43,14 +40,12 @@ const connect = (address, password) => {
 }
 
 window.addEventListener('DOMContentLoaded', e => {
-  document.getElementById('disconnect-btn').addEventListener('click', disconnect)
-  document.getElementById('connect-password').addEventListener('submit', e => {
-    e.preventDefault()
-    rfb.sendCredentials({ password: e.target[0].value })
+  document.getElementById('vm-start-btn').addEventListener('click', () => {
+    setTimeout(() => {
+      connect('127.0.0.1:5700')
+    }, 2000)
   })
-  document.getElementById('connect-form').addEventListener('submit', e => {
-    e.preventDefault()
-
-    connect(e.target[0].value)
+  document.getElementById('vm-stop-btn').addEventListener('click', () => {
+    disconnect(false)
   })
 })

@@ -4,7 +4,8 @@
   "description": "Playing with express",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "browserify": ".\\node_modules\\.bin\\browserify public\\js\\vnc.js -o public\\js\\bundle.js"
   },
   "author": "Christian",
   "license": "ISC",
