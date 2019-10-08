@@ -22,14 +22,18 @@ class VirtualMachine extends EventEmitter {
         '-drive', 'file=c:\\vm\\share\\simu\\data\\qt\\rootfs.ext2,if=scsi,format=raw',
         '-append', '"root=/dev/sda console=ttyAMA0,115200 video=320x240 vt.global_cursor_default=0"',
         '-serial', 'stdio',
-        // '-netdev', 'tap,id=net0,ifname=EtherTAP',
-        '-netdev', 'user,id=net0,net=192.168.42.0/24,hostfwd=tcp::20022-192.168.42.101:22,hostfwd=tcp::20443-192.168.42.101:443,hostfwd=tcp::24000-192.168.42.101:4000',
-        '-net', 'nic,model=rtl8139,netdev=net0',
+        '-netdev', 'tap,id=net0,ifname=EtherTAP',
+        '-device', 'rtl8139,netdev=net0',
+        // '-netdev', 'user,id=net0,net=192.168.42.0/24,hostfwd=tcp::20022-192.168.42.101:22,hostfwd=tcp::20443-192.168.42.101:443,hostfwd=tcp::24000-192.168.42.101:4000',
+        // '-net', 'nic,model=virtio-net-pci,netdev=net0',
+        // '-device', 'virtio-net-pci,netdev=net0',
         '-display', 'vnc=:0,websocket',
         '-device', 'qemu-xhci',
         '-device', 'usb-tablet',
         '-qmp', 'tcp::45454,server,nowait',
-        '-serial', 'tcp:127.0.0.1:8000,server,nowait'
+        '-serial', 'tcp:127.0.0.1:8000,server,nowait',
+        '-s'
+        //'-S'
       ]
     } else {
       this.config = config
